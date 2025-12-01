@@ -12,7 +12,7 @@ export interface ElectronAPI {
     closeWindow: () => Promise<void>;
     setWindowPosition: (x: number, y: number) => Promise<boolean>;
     getWindowPosition: () => Promise<[number, number]>;
-
+    isWindowMaximized: () => Promise<boolean>;
 }
 
 // API definition
@@ -26,7 +26,7 @@ const electronAPI: ElectronAPI = {
     closeWindow: () => ipcRenderer.invoke('window:close'),
     setWindowPosition: (x: number, y: number) => ipcRenderer.invoke('window:setPosition', x, y),
     getWindowPosition: () => ipcRenderer.invoke('window:getPosition'),
-    
+    isWindowMaximized: () => ipcRenderer.invoke('window:isMaximized'),
 };
 
 // Expose the API to the renderer process

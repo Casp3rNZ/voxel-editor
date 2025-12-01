@@ -12,6 +12,7 @@ const electronAPI = {
     closeWindow: () => electron_1.ipcRenderer.invoke('window:close'),
     setWindowPosition: (x, y) => electron_1.ipcRenderer.invoke('window:setPosition', x, y),
     getWindowPosition: () => electron_1.ipcRenderer.invoke('window:getPosition'),
+    isWindowMaximized: () => electron_1.ipcRenderer.invoke('window:isMaximized'),
 };
 // Expose the API to the renderer process
 electron_1.contextBridge.exposeInMainWorld('electronAPI', electronAPI);

@@ -43,22 +43,22 @@ class Main {
     init() {
         electron_1.app.whenReady().then(() => {
             this.createWindow();
-            electron_1.app.on('activate', () => {
-                // On macOS it's common to re-create a window in the app when the
+            electron_1.app.on("activate", () => {
+                // On macOS it"s common to re-create a window in the app when the
                 // dock icon is clicked and there are no other windows open.
                 if (electron_1.BrowserWindow.getAllWindows().length === 0)
                     this.createWindow();
             });
         });
-        electron_1.app.on('window-all-closed', () => {
-            if (utils_1.platform !== 'darwin') {
+        electron_1.app.on("window-all-closed", () => {
+            if (utils_1.platform !== "darwin") {
                 electron_1.app.quit();
             }
         });
         this.setupIpcHandlers();
     }
     createWindow() {
-        const preload = path.join(__dirname, 'preload.js');
+        const preload = path.join(__dirname, "preload.js");
         // Create the browser window
         this.mainWindow = new electron_1.BrowserWindow({
             height: 900,
@@ -70,7 +70,7 @@ class Main {
             },
             show: false,
             frame: false,
-            titleBarStyle: 'hidden',
+            titleBarStyle: "hidden",
             autoHideMenuBar: true,
             resizable: true,
             movable: false,
@@ -82,35 +82,35 @@ class Main {
         this.mainWindow.webContents.openDevTools();
         // Load the appropriate URL
         if (utils_1.isDev) {
-            this.mainWindow.loadURL('http://127.0.0.1:5173');
+            this.mainWindow.loadURL("http://127.0.0.1:5173");
             this.mainWindow.webContents.openDevTools();
         }
         else {
-            this.mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+            this.mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
         }
-        this.mainWindow.on('ready-to-show', () => {
+        this.mainWindow.on("ready-to-show", () => {
             this.mainWindow?.show();
         });
-        this.mainWindow.on('closed', () => {
+        this.mainWindow.on("closed", () => {
             this.mainWindow = null;
         });
-        this.mainWindow.on('resize', () => {
+        this.mainWindow.on("resize", () => {
             // re-render main window on resize
             this.mainWindow?.reload();
         });
     }
     setupIpcHandlers() {
         // Example IPC handlers - expand these as needed
-        electron_1.ipcMain.handle('app:getVersion', () => {
+        electron_1.ipcMain.handle("app:getVersion", () => {
             return electron_1.app.getVersion();
         });
-        electron_1.ipcMain.handle('app:getName', () => {
+        electron_1.ipcMain.handle("app:getName", () => {
             return electron_1.app.getName();
         });
-        electron_1.ipcMain.handle('window:minimize', () => {
+        electron_1.ipcMain.handle("window:minimize", () => {
             this.mainWindow?.minimize();
         });
-        electron_1.ipcMain.handle('window:maximize', () => {
+        electron_1.ipcMain.handle("window:maximize", () => {
             if (this.mainWindow?.isMaximized()) {
                 this.mainWindow.unmaximize();
             }
@@ -118,24 +118,23 @@ class Main {
                 this.mainWindow?.maximize();
             }
         });
-        electron_1.ipcMain.handle('window:setPosition', (_, x, y) => {
+        electron_1.ipcMain.handle("window:setPosition", (_, x, y) => {
             if (this.mainWindow && !this.mainWindow.isMaximized()) {
                 this.mainWindow.setPosition(x, y);
             }
             return true;
         });
-        electron_1.ipcMain.handle('window:getPosition', () => {
+        electron_1.ipcMain.handle("window:getPosition", () => {
             if (this.mainWindow) {
                 return this.mainWindow.getPosition();
             }
             return [0, 0];
         });
-        electron_1.ipcMain.handle('window:close', () => {
+        electron_1.ipcMain.handle("window:close", () => {
             this.mainWindow?.close();
         });
-        // File system operations
-        electron_1.ipcMain.handle('fs:readFile', async (_, filePath) => {
-            return { success: true, data: 'File content would go here' };
+        electron_1.ipcMain.handle("window:isMaximized", () => {
+            return this.mainWindow?.isMaximized() || false;
         });
     }
 }

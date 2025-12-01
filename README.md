@@ -2,23 +2,13 @@
 A lightweight, modern voxel editor built with Electron, React, TypeScript, and Vite.
 
 ## Project Structure
-
 ```
 voxelEditor/
 ├── src/
 │   ├── main/           # Electron main process
-│   │   ├── main.ts     # Main Electron process
-│   │   └── utils.ts    # Utility functions
 │   ├── preload/        # Preload scripts
-│   │   └── preload.ts  # IPC API bridge
 │   └── renderer/       # React frontend
-│       ├── main.tsx    # React entry point
-│       ├── App.tsx     # Main React component
-│       ├── App.css     # App styles
-│       ├── index.css   # Global styles
-│       ├── index.html  # HTML template
 │       └── types/      # Type definitions
-│           └── electron.d.ts
 ├── dist/               # Built files
 ├── package.json        # Dependencies and scripts
 ├── vite.config.ts      # Vite configuration
@@ -28,8 +18,7 @@ voxelEditor/
 └── tsconfig.node.json  # TypeScript config (Vite)
 ```
 
-## Available Scripts
-
+## NPM Commands
 - `npm run dev` - Start both Vite dev server and Electron in development mode
 - `npm run dev:vite` - Start only the Vite development server
 - `npm run dev:electron` - Start only Electron (waits for Vite server)

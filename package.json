@@ -13,17 +13,9 @@
     "electron": "electron .",
     "preview": "vite preview"
   },
-  "keywords": [
-    "electron",
-    "vite",
-    "react",
-    "typescript",
-    "voxel",
-    "editor"
-  ],
-  "author": "",
-  "license": "ISC",
-  "description": "A voxel editor built with Electron, React, and Vite",
+  "author": "Casp3rNZ",
+  "license": "MIT",
+  "description": "A voxel model editor built with Electron, React, and Vite",
   "dependencies": {
     "babylonjs": "^8.39.0",
     "react": "^19.2.0",

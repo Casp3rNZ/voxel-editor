@@ -7,6 +7,7 @@ export interface ElectronAPI {
     closeWindow: () => Promise<void>;
     setWindowPosition: (x: number, y: number) => Promise<boolean>;
     getWindowPosition: () => Promise<[number, number]>;
+    isWindowMaximized: () => Promise<boolean>;
 }
 
 declare global {

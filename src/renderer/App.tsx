@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import './css/App.css';
 import { BabylonScene, BabylonSceneRef } from './babylon/scene';
+import * as BABYLON from 'babylonjs';
 
 function App() {
     const [appVersion, setAppVersion] = useState<string>('');
     const [appName, setAppName] = useState<string>('');
-    const [toolMode, setToolMode] = useState<'select' | 'place'>('select');
+    const [toolMode, setToolMode] = useState<'select' | 'place' | 'delete'>('select');
     const [voxelColor, setVoxelColor] = useState('#9932CC');
     const babylonSceneRef = useRef<BabylonSceneRef>(null);
+    const [selectedMesh, setSelectedMesh] = useState<BABYLON.AbstractMesh | null>(null);
 
     useEffect(() => {
         // Test the IPC API
@@ -46,6 +48,19 @@ function App() {
         }
     };
 
+    const handleIsMaximized = async () => {
+        var out: boolean = false;
+        if (window.electronAPI) {
+            out = await window.electronAPI.isWindowMaximized() == true ? true : false;
+        }
+        return out;
+    };
+
+    const handleMeshSelected = (mesh: BABYLON.AbstractMesh | null) => {
+        setSelectedMesh(mesh);
+        console.log('Mesh selected in App:', mesh);
+    }
+
     const handleMouseDown = async (e: React.MouseEvent) => {
         if (e.button === 0 && window.electronAPI) { // Left mouse button
             e.preventDefault();
@@ -56,9 +71,17 @@ function App() {
             const [initialWindowX, initialWindowY] = await window.electronAPI.getWindowPosition();
             let isMoving = false;
             
-            const handleMouseMove = (moveEvent: MouseEvent) => {
+            const handleMouseMove = async (moveEvent: MouseEvent) => {
+                if (moveEvent.movementX === 0 && moveEvent.movementY === 0) return;
                 if (!isMoving) {
                     isMoving = true;
+                    // Not sure why this doesn't work
+                    //const maximized = await handleIsMaximized();
+                    //if (maximized) {
+                    //    console.log('Minimizing window for move');
+                    //    await handleMinimize();
+                    //    return;
+                    //}
                     requestAnimationFrame(async () => {
                         const deltaX = moveEvent.screenX - startX;
                         const deltaY = moveEvent.screenY - startY;
@@ -72,12 +95,16 @@ function App() {
                 }
             };
             
-            // unregister mouse move and up listeners
             const handleMouseUp = () => {
+                // unregister mouse move and up listeners
                 document.removeEventListener('mousemove', handleMouseMove);
                 document.removeEventListener('mouseup', handleMouseUp);
+
+                // if drag ended at top of screen, maximize window
+                if (window.electronAPI && window.screenY < -0.1) {
+                    handleMaximize();
+                }
             };
-            
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -94,7 +121,10 @@ function App() {
                 </div>
             </header>
             <main>
-                <BabylonScene ref={babylonSceneRef} />
+                <BabylonScene 
+                ref={babylonSceneRef}
+                onMeshSelected={handleMeshSelected} 
+                />
                 <aside className="toolbar">
                     <h3>Toolbar</h3>
                     <div>
@@ -125,6 +155,18 @@ function App() {
                                     }}
                                 />
                                 <label htmlFor="place">Place</label>
+                                <input 
+                                    type="radio" 
+                                    id="delete" 
+                                    name="mode" 
+                                    value="delete" 
+                                    checked={toolMode === 'delete'}
+                                    onChange={() => {
+                                        setToolMode('delete');
+                                        babylonSceneRef.current?.setMode('delete');
+                                    }}
+                                />
+                                <label htmlFor="delete">Delete</label>
                             </div>
                         </div>
                         <div className="toolbar-section">
@@ -162,10 +204,29 @@ function App() {
                                         babylonSceneRef.current?.setVoxelColor(e.target.value);
                                     }}
                                 />
-                                <label className="property-label">Transparent:</label>
-                                <input className="property-value" type="checkbox" />
-                                <p>coordinate: xyz</p>
+                                <div>
+                                    <label className="property-label">Transparent:</label>
+                                    <input className="property-value" type="checkbox" />
+                                </div>
                             </div> 
+                        </div>
+                        <div className="toolbar-section">
+                            <h5>Selected Voxel:</h5>
+                            {selectedMesh ? (
+                                <div className="property-group">
+                                    <label className="property-label">ID: {selectedMesh.id}</label>
+                                    <div>
+                                        <label className="property-label">Position:</label>
+                                        <p className="property-value">{`(${selectedMesh.position.x.toFixed(2)}, ${selectedMesh.position.y.toFixed(2)}, ${selectedMesh.position.z.toFixed(2)})`}</p>
+                                    </div>
+                                    <div>
+                                        <label className="property-label">Scaling:</label>
+                                        <p className="property-value">{`(${selectedMesh.scaling.x.toFixed(2)}, ${selectedMesh.scaling.y.toFixed(2)}, ${selectedMesh.scaling.z.toFixed(2)})`}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p>No Voxel selected</p>
+                            )}
                         </div>
                     </div>
                 </aside>

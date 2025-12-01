@@ -94,7 +94,6 @@ h3 {
 main {
   display: flex;
   justify-content: center;
-  flex-direction: column;
   flex: 1;
   margin-top: 32px;
   position: relative;
@@ -112,13 +111,15 @@ canvas:focus {
   border: none !important;
 }
 
+/* toolbar */
+
 .toolbar {
   width: 280px;
   background: linear-gradient(180deg, var(--surface-bg) 0%, var(--secondary-bg) 100%);
   box-sizing: border-box;
+  top: 32px;
   right: 0;
   position: fixed;
-  top: 32px;
   bottom: 0;
   display: flex;
   flex-direction: column;
@@ -129,23 +130,6 @@ canvas:focus {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
   z-index: 100;
-}
-
-.toolbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.toolbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.toolbar::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 4px;
-}
-
-.toolbar::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-purple);
 }
 
 .toolbar-section {
@@ -307,14 +291,12 @@ canvas:focus {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
   font-weight: 500;
 }
 
 .property-value {
   color: var(--text-primary);
   font-size: 13px;
-  padding: 6px 8px;
   background: var(--tertiary-bg);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
@@ -335,3 +317,8 @@ canvas:focus {
   color: var(--text-secondary)
 }
 
+.property-group div {
+  display: flex;
+  align-items: flex-end;
+  gap: 3rem;
+}
