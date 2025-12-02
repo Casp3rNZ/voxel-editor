@@ -58,10 +58,10 @@ function App() {
 
     const handleMeshSelected = (mesh: AbstractMesh | null) => {
         setSelectedMesh(mesh);
-        console.log('Mesh selected in App:', mesh);
     }
 
     const handleToolModeChange = (mode: 'select' | 'place' | 'delete') => {
+        babylonSceneRef.current?.clearSelection();
         setToolMode(mode);
         babylonSceneRef.current?.setMode(mode);
     }
@@ -92,7 +92,7 @@ function App() {
 
     const handleExportToGLB = async () => {
         await babylonSceneRef.current?.exportVoxelsAsGLB();
-    }
+    };
 
     const handleMouseDown = async (e: React.MouseEvent) => {
         if (e.button === 0 && window.electronAPI) { // Left mouse button

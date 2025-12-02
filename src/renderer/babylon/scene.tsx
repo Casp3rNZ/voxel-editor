@@ -13,8 +13,7 @@ import {
     HemisphericLight, 
     Color4, 
     PointerEventTypes, 
-    PickingInfo, 
-    HighlightLayer
+    PickingInfo
 } from '@babylonjs/core';
 import { GLTF2Export,  } from '@babylonjs/serializers';
 
@@ -26,10 +25,11 @@ export interface BabylonSceneRef {
     exportVoxels: () => Array<{ position: Vector3; color: string }>;
     importVoxels: (voxels: Array<{ position: Vector3; color: string }>) => void;
     exportVoxelsAsGLB: () => Promise<void>;
+    clearSelection: () => void;
 }
 
 interface BabylonSceneProps {
-    onMeshSelected?: (mesh: AbstractMesh | null) => void;
+    onMeshSelected: (mesh: AbstractMesh | null) => void;
 }
 
 export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ onMeshSelected }, ref) => {
@@ -37,6 +37,8 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
     const sceneRef = useRef<Scene | null>(null);
     const currentModeRef = useRef<'select' | 'place' | 'delete'>('select');
     const currentVoxelColorRef = useRef('#9932CC');
+    const highlightBoxRef = useRef<AbstractMesh | null>(null);
+    const selectBoxRef = useRef<AbstractMesh | null>(null);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -46,6 +48,15 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         
         setVoxelColor: (color: string) => {
             currentVoxelColorRef.current = color;
+        },
+
+        clearSelection: () => {
+            if (selectBoxRef.current) {
+                selectBoxRef.current.isVisible = false;
+            }
+            if (highlightBoxRef.current) {
+                highlightBoxRef.current.isVisible = false;
+            }
         },
         
         clearScene: () => {
@@ -171,21 +182,21 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         scene.clearColor = new Color4(0.8, 0.9, 1, 1);
 
         // Create a highlight mesh for voxel preview
-        const highlightBox = MeshBuilder.CreateBox('highlightBox', { size: 1 }, scene);
-        highlightBox.material = new StandardMaterial('highlightMaterial', scene);
-        (highlightBox.material as StandardMaterial).alpha = 0.9;
-        highlightBox.isVisible = false;
-        highlightBox.isPickable = false;
-        highlightBox.showBoundingBox = true;
+        highlightBoxRef.current = MeshBuilder.CreateBox('highlightBox', { size: 1 }, scene);
+        highlightBoxRef.current.material = new StandardMaterial('highlightMaterial', scene);
+        (highlightBoxRef.current.material as StandardMaterial).alpha = 0.9;
+        highlightBoxRef.current.isVisible = false;
+        highlightBoxRef.current.isPickable = false;
+        highlightBoxRef.current.showBoundingBox = true;
 
         // Create a outline box for the selected voxel
-        const selectBox = MeshBuilder.CreateBox('selectBox', { size: 1 }, scene);
-        selectBox.material = new StandardMaterial('selectMaterial', scene);
-        (selectBox.material as StandardMaterial).alpha = 0.5;
-            (selectBox.material as StandardMaterial).emissiveColor = new Color3(0, 1, 0);
-        selectBox.isVisible = false;
-        selectBox.isPickable = false;
-        selectBox.showBoundingBox = true;
+        selectBoxRef.current = MeshBuilder.CreateBox('selectBox', { size: 1 }, scene);
+        selectBoxRef.current.material = new StandardMaterial('selectMaterial', scene);
+        (selectBoxRef.current.material as StandardMaterial).alpha = 0.5;
+            (selectBoxRef.current.material as StandardMaterial).emissiveColor = new Color3(0, 1, 0);
+        selectBoxRef.current.isVisible = false;
+        selectBoxRef.current.isPickable = false;
+        selectBoxRef.current.showBoundingBox = true;
 
         // Ground plane for raycasting reference
         // const ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 20, height: 20 }, scene);
@@ -198,6 +209,7 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         const moveThrottle = 30; // ~33fps throttling
         
         const onPointerMove = (evt: PointerEvent) => {
+            if (highlightBoxRef.current === null) return;
             const currentTime = Date.now();
             if (currentTime - lastMoveTime < moveThrottle) return;
             lastMoveTime = currentTime;
@@ -212,41 +224,42 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                                 return;
                             }
                             // Position highlight box at calculated target position
-                            highlightBox.position = new Vector3(newBlockPos.x, newBlockPos.y, newBlockPos.z);
-                            (highlightBox.material as StandardMaterial).emissiveColor = Color3.FromHexString(currentVoxelColorRef.current);
-                            highlightBox.isVisible = true;
+                            highlightBoxRef.current.position = new Vector3(newBlockPos.x, newBlockPos.y, newBlockPos.z);
+                            (highlightBoxRef.current.material as StandardMaterial).emissiveColor = Color3.FromHexString(currentVoxelColorRef.current);
+                            highlightBoxRef.current.isVisible = true;
                         } else {
-                            highlightBox.isVisible = false;
+                            highlightBoxRef.current.isVisible = false;
                         }
                     } else {
-                        highlightBox.isVisible = false;
+                        highlightBoxRef.current.isVisible = false;
                     }
                     break;
                 case 'select':
                     if(pmPickInfo && pmPickInfo.hit && pmPickInfo.pickedMesh) {
                         // highlight selected voxel
-                        highlightBox.position = pmPickInfo.pickedMesh.position;
-                        (highlightBox.material as StandardMaterial).emissiveColor = new Color3(0, 1, 0);
-                        highlightBox.isVisible = true;
+                        highlightBoxRef.current.position = pmPickInfo.pickedMesh.position;
+                        (highlightBoxRef.current.material as StandardMaterial).emissiveColor = new Color3(0, 1, 0);
+                        highlightBoxRef.current.isVisible = true;
                     }else {
-                        highlightBox.isVisible = false;
+                        highlightBoxRef.current.isVisible = false;
                     }
                     break;
                 case 'delete':
                     if(pmPickInfo && pmPickInfo.hit && pmPickInfo.pickedMesh) {
                         if(pmPickInfo.pickedMesh.name === "voxel_0") return; // don't highlight the base voxel
                         // highlight voxel to be deleted
-                        highlightBox.position = pmPickInfo.pickedMesh.position;
-                        (highlightBox.material as StandardMaterial).emissiveColor = new Color3(1, 0, 0);
-                        highlightBox.isVisible = true;
+                        highlightBoxRef.current.position = pmPickInfo.pickedMesh.position;
+                        (highlightBoxRef.current.material as StandardMaterial).emissiveColor = new Color3(1, 0, 0);
+                        highlightBoxRef.current.isVisible = true;
                     }else {
-                        highlightBox.isVisible = false;
+                        highlightBoxRef.current.isVisible = false;
                     }
                     break;
             }
         };
 
         const onPointerDown = (evt: PointerEvent) => {
+            if (highlightBoxRef.current === null || selectBoxRef.current === null) return;
             if (evt.button !== 0) return; // Only left click
             const pcPickInfo = scene.pick(evt.clientX, evt.clientY);
             switch(currentModeRef.current) {
@@ -289,20 +302,20 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                             // Remove from shadow casters
                             shadowGenerator.removeShadowCaster(pcPickInfo.pickedMesh);
                             pcPickInfo.pickedMesh.dispose();
-                            highlightBox.isVisible = false;
+                            highlightBoxRef.current.isVisible = false;
                         }
                     }
                     break;
                 case 'select':
                     if(pcPickInfo && pcPickInfo.hit && pcPickInfo.pickedMesh) {
                         if(onMeshSelected) {
-                            selectBox.position = pcPickInfo.pickedMesh.position;
-                            selectBox.isVisible = true;
+                            selectBoxRef.current.position = pcPickInfo.pickedMesh.position;
+                            selectBoxRef.current.isVisible = true;
                             onMeshSelected(pcPickInfo.pickedMesh);
                         }
                     }else{
                         if(onMeshSelected) {
-                            selectBox.isVisible = false;
+                            selectBoxRef.current.isVisible = false;
                             onMeshSelected(null);
                         }
                     }
