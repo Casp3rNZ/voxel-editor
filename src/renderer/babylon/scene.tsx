@@ -13,7 +13,8 @@ import {
     HemisphericLight, 
     Color4, 
     PointerEventTypes, 
-    PickingInfo 
+    PickingInfo, 
+    HighlightLayer
 } from '@babylonjs/core';
 import { GLTF2Export,  } from '@babylonjs/serializers';
 
@@ -177,6 +178,15 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         highlightBox.isPickable = false;
         highlightBox.showBoundingBox = true;
 
+        // Create a outline box for the selected voxel
+        const selectBox = MeshBuilder.CreateBox('selectBox', { size: 1 }, scene);
+        selectBox.material = new StandardMaterial('selectMaterial', scene);
+        (selectBox.material as StandardMaterial).alpha = 0.5;
+            (selectBox.material as StandardMaterial).emissiveColor = new Color3(0, 1, 0);
+        selectBox.isVisible = false;
+        selectBox.isPickable = false;
+        selectBox.showBoundingBox = true;
+
         // Ground plane for raycasting reference
         // const ground = BABYLON.MeshBuilder.CreateGround('ground', { width: 20, height: 20 }, scene);
         // const groundMaterial = new BABYLON.StandardMaterial('groundMaterial', scene);
@@ -285,12 +295,14 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                     break;
                 case 'select':
                     if(pcPickInfo && pcPickInfo.hit && pcPickInfo.pickedMesh) {
-                        // TODO: pass property data to UI
                         if(onMeshSelected) {
+                            selectBox.position = pcPickInfo.pickedMesh.position;
+                            selectBox.isVisible = true;
                             onMeshSelected(pcPickInfo.pickedMesh);
                         }
                     }else{
                         if(onMeshSelected) {
+                            selectBox.isVisible = false;
                             onMeshSelected(null);
                         }
                     }
