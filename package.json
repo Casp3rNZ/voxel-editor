@@ -17,6 +17,7 @@
   "license": "MIT",
   "description": "A voxel model editor built with Electron, React, and Vite",
   "dependencies": {
+    "@babylonjs/serializers": "^8.39.2",
     "babylonjs": "^8.39.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

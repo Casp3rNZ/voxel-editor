@@ -1,22 +1,39 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import * as BABYLON from 'babylonjs';
+import { 
+    AbstractMesh, 
+    Scene, 
+    Vector3, 
+    StandardMaterial, 
+    MeshBuilder, 
+    DirectionalLight, 
+    ShadowGenerator, 
+    Color3, 
+    ArcRotateCamera, 
+    Engine, 
+    HemisphericLight, 
+    Color4, 
+    PointerEventTypes, 
+    PickingInfo 
+} from '@babylonjs/core';
+import { GLTF2Export,  } from '@babylonjs/serializers';
 
 // Define the interface for methods exposed to parent components
 export interface BabylonSceneRef {
     setMode: (mode: 'select' | 'place' | 'delete') => void;
     setVoxelColor: (color: string) => void;
     clearScene: () => void;
-    exportVoxels: () => Array<{ position: BABYLON.Vector3; color: string }>;
-    importVoxels: (voxels: Array<{ position: BABYLON.Vector3; color: string }>) => void;
+    exportVoxels: () => Array<{ position: Vector3; color: string }>;
+    importVoxels: (voxels: Array<{ position: Vector3; color: string }>) => void;
+    exportVoxelsAsGLB: () => Promise<void>;
 }
 
 interface BabylonSceneProps {
-    onMeshSelected?: (mesh: BABYLON.AbstractMesh | null) => void;
+    onMeshSelected?: (mesh: AbstractMesh | null) => void;
 }
 
 export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ onMeshSelected }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const sceneRef = useRef<BABYLON.Scene | null>(null);
+    const sceneRef = useRef<Scene | null>(null);
     const currentModeRef = useRef<'select' | 'place' | 'delete'>('select');
     const currentVoxelColorRef = useRef('#9932CC');
 
@@ -45,11 +62,11 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                 .filter(mesh => mesh.name.startsWith('voxel_'))
                 .map(mesh => ({
                     position: mesh.position,
-                    color: (mesh.material as BABYLON.StandardMaterial)?.diffuseColor.toHexString() || (mesh.material as BABYLON.StandardMaterial)?.emissiveColor.toHexString() || '#FFFFFF',
+                    color: (mesh.material as StandardMaterial)?.diffuseColor.toHexString() || (mesh.material as StandardMaterial)?.emissiveColor.toHexString() || '#FFFFFF',
                 }));
         },
         
-        importVoxels: (voxels: Array<{ position: BABYLON.Vector3; color: string }>) => {
+        importVoxels: (voxels: Array<{ position: Vector3; color: string }>) => {
             if (!sceneRef.current) return;
             
             // Clear existing voxels first
@@ -59,20 +76,33 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
             
             // Create new voxels
             voxels.forEach((voxelData, index) => {
-                const newVoxel = BABYLON.MeshBuilder.CreateBox(`voxel_${index}`, { size: 1 }, sceneRef.current!);
-                newVoxel.position = new BABYLON.Vector3(voxelData.position.x, voxelData.position.y, voxelData.position.z);
-                const voxelMaterial = new BABYLON.StandardMaterial(`voxelMaterial_${index}`, sceneRef.current!);
-                voxelMaterial.diffuseColor = BABYLON.Color3.FromHexString(voxelData.color);
+                const newVoxel = MeshBuilder.CreateBox(`voxel_${index}`, { size: 1 }, sceneRef.current!);
+                newVoxel.position = new Vector3(voxelData.position.x, voxelData.position.y, voxelData.position.z);
+                const voxelMaterial = new StandardMaterial(`voxelMaterial_${index}`, sceneRef.current!);
+                voxelMaterial.diffuseColor = Color3.FromHexString(voxelData.color);
                 newVoxel.material = voxelMaterial;
                 
                 // Add shadow support to imported voxels
-                const dirLight = sceneRef.current!.lights.find(light => light instanceof BABYLON.DirectionalLight) as BABYLON.DirectionalLight;
-                const shadowGen = dirLight?.getShadowGenerator() as BABYLON.ShadowGenerator;
+                const dirLight = sceneRef.current!.lights.find(light => light instanceof DirectionalLight) as DirectionalLight;
+                const shadowGen = dirLight?.getShadowGenerator() as ShadowGenerator;
                 if (shadowGen) {
                     shadowGen.addShadowCaster(newVoxel);
                     newVoxel.receiveShadows = true;
                 }
             });
+        },
+
+        exportVoxelsAsGLB: async () => {
+            if (!sceneRef.current) return;
+            try {
+                const voxelMeshes = sceneRef.current.meshes.filter(mesh => mesh.name.startsWith('voxel_'));
+                const glb = await GLTF2Export.GLBAsync(sceneRef.current, "voxels-model", {
+                    shouldExportNode: (node) => voxelMeshes.includes(node as AbstractMesh)
+                });
+                glb.downloadFiles();
+            }catch (error) {
+                console.error("Error exporting GLB:", error);
+            }
         }
     }), []);
 
@@ -80,17 +110,17 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         if (!canvasRef.current) return;
 
         const canvas = canvasRef.current;
-        const engine = new BABYLON.Engine(canvas, true);
-        const scene = new BABYLON.Scene(engine);
+        const engine = new Engine(canvas, true);
+        const scene = new Scene(engine);
         sceneRef.current = scene;
 
         // Camera
-        const camera = new BABYLON.ArcRotateCamera(
+        const camera = new ArcRotateCamera(
             'camera',
             -Math.PI / 1,
             Math.PI / 2.5,
             10,
-            new BABYLON.Vector3(0, 1, 0) ,
+            new Vector3(0, 1, 0) ,
             scene
         );
         camera.attachControl(canvas, true);
@@ -105,30 +135,30 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
             camera.autoRotationBehavior.idleRotationSpinupTime = 1000;
         }
         // Light
-        const light = new BABYLON.HemisphericLight(
+        const light = new HemisphericLight(
             'light',
-            new BABYLON.Vector3(0, 1, 0),
+            new Vector3(0, 1, 0),
             scene
         );
         light.intensity = 0.6;
 
         // directional light with shadow mapping
-        const dirLight = new BABYLON.DirectionalLight(
+        const dirLight = new DirectionalLight(
             'dirLight',
-            new BABYLON.Vector3(-1, -2, -1),
+            new Vector3(-1, -2, -1),
             scene
         );
-        dirLight.position = new BABYLON.Vector3(20, 40, 20);
+        dirLight.position = new Vector3(20, 40, 20);
         dirLight.intensity = 1;
         
         // Create shadow generator
-        const shadowGenerator = new BABYLON.ShadowGenerator(1024, dirLight);
+        const shadowGenerator = new ShadowGenerator(1024, dirLight);
         shadowGenerator.darkness = 0.3; 
         shadowGenerator.bias = 0.00001;
 
 
         // Box
-        const box = BABYLON.MeshBuilder.CreateBox('voxel_0', { size: 1 }, scene);
+        const box = MeshBuilder.CreateBox('voxel_0', { size: 1 }, scene);
         box.position.y = 0.5;
         box.showBoundingBox = false;
         
@@ -137,12 +167,12 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         box.receiveShadows = true;
 
         // background bright sky
-        scene.clearColor = new BABYLON.Color4(0.8, 0.9, 1, 1);
+        scene.clearColor = new Color4(0.8, 0.9, 1, 1);
 
         // Create a highlight mesh for voxel preview
-        const highlightBox = BABYLON.MeshBuilder.CreateBox('highlightBox', { size: 1 }, scene);
-        highlightBox.material = new BABYLON.StandardMaterial('highlightMaterial', scene);
-        (highlightBox.material as BABYLON.StandardMaterial).alpha = 0.9;
+        const highlightBox = MeshBuilder.CreateBox('highlightBox', { size: 1 }, scene);
+        highlightBox.material = new StandardMaterial('highlightMaterial', scene);
+        (highlightBox.material as StandardMaterial).alpha = 0.9;
         highlightBox.isVisible = false;
         highlightBox.isPickable = false;
         highlightBox.showBoundingBox = true;
@@ -172,8 +202,8 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                                 return;
                             }
                             // Position highlight box at calculated target position
-                            highlightBox.position = new BABYLON.Vector3(newBlockPos.x, newBlockPos.y, newBlockPos.z);
-                            (highlightBox.material as BABYLON.StandardMaterial).emissiveColor = BABYLON.Color3.FromHexString(currentVoxelColorRef.current);
+                            highlightBox.position = new Vector3(newBlockPos.x, newBlockPos.y, newBlockPos.z);
+                            (highlightBox.material as StandardMaterial).emissiveColor = Color3.FromHexString(currentVoxelColorRef.current);
                             highlightBox.isVisible = true;
                         } else {
                             highlightBox.isVisible = false;
@@ -186,7 +216,7 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                     if(pmPickInfo && pmPickInfo.hit && pmPickInfo.pickedMesh) {
                         // highlight selected voxel
                         highlightBox.position = pmPickInfo.pickedMesh.position;
-                        (highlightBox.material as BABYLON.StandardMaterial).emissiveColor = new BABYLON.Color3(0, 1, 0);
+                        (highlightBox.material as StandardMaterial).emissiveColor = new Color3(0, 1, 0);
                         highlightBox.isVisible = true;
                     }else {
                         highlightBox.isVisible = false;
@@ -197,8 +227,10 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                         if(pmPickInfo.pickedMesh.name === "voxel_0") return; // don't highlight the base voxel
                         // highlight voxel to be deleted
                         highlightBox.position = pmPickInfo.pickedMesh.position;
-                        (highlightBox.material as BABYLON.StandardMaterial).emissiveColor = new BABYLON.Color3(1, 0, 0);
+                        (highlightBox.material as StandardMaterial).emissiveColor = new Color3(1, 0, 0);
                         highlightBox.isVisible = true;
+                    }else {
+                        highlightBox.isVisible = false;
                     }
                     break;
             }
@@ -215,20 +247,20 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
                             const newBlockPos = getNewBlockPos(pcPickInfo);
                             if (!newBlockPos) return;
                             // Check if there's already a voxel at this position
-                            const targetPosition = new BABYLON.Vector3(newBlockPos.x, newBlockPos.y, newBlockPos.z);
+                            const targetPosition = new Vector3(newBlockPos.x, newBlockPos.y, newBlockPos.z);
                             const existingVoxel = scene.meshes.find(mesh => 
                                 mesh.name.startsWith('voxel_') && 
                                 mesh.position.subtract(targetPosition).length() < 0.1 // Small tolerance for floating point comparison
                             );
                             
                             if (!existingVoxel) {
-                                const newVoxel = BABYLON.MeshBuilder.CreateBox(`voxel_${Date.now()}`, { size: 1 }, scene);
+                                const newVoxel = MeshBuilder.CreateBox(`voxel_${Date.now()}`, { size: 1 }, scene);
                                 newVoxel.position = targetPosition;
                                 newVoxel.isPickable = true;
                                 
-                                const voxelMaterial = new BABYLON.StandardMaterial(`voxelMaterial_${Date.now()}`, scene);
+                                const voxelMaterial = new StandardMaterial(`voxelMaterial_${Date.now()}`, scene);
                                 // Convert hex color to RGB
-                                const color = BABYLON.Color3.FromHexString(currentVoxelColorRef.current);
+                                const color = Color3.FromHexString(currentVoxelColorRef.current);
                                 voxelMaterial.diffuseColor = color;
                                 newVoxel.material = voxelMaterial;
                                 
@@ -269,26 +301,26 @@ export const BabylonScene = forwardRef<BabylonSceneRef, BabylonSceneProps>(({ on
         // Disable camera controls when interacting with voxels
         const onPointerObservable = scene.onPointerObservable.add((pointerInfo) => {
             switch (pointerInfo.type) {
-                case BABYLON.PointerEventTypes.POINTERMOVE:
+                case PointerEventTypes.POINTERMOVE:
                     if (pointerInfo.event) {
                         onPointerMove(pointerInfo.event as PointerEvent);
                     }
                     break;
-                case BABYLON.PointerEventTypes.POINTERDOWN:
+                case PointerEventTypes.POINTERDOWN:
                     if (pointerInfo.event && (pointerInfo.event as PointerEvent).button === 0) {
                         // Temporarily disable camera controls during voxel placement
                         camera.detachControl();
                         onPointerDown(pointerInfo.event as PointerEvent);
                     }
                     break;
-                case BABYLON.PointerEventTypes.POINTERUP:
+                case PointerEventTypes.POINTERUP:
                     // Re-enable camera controls
                     camera.attachControl(canvas, true);
                     break;
             }
         });
 
-        const getNewBlockPos = (pick: BABYLON.PickingInfo) => {
+        const getNewBlockPos = (pick: PickingInfo) => {
             if (!pick.pickedPoint || !pick.pickedMesh) return null;
             let targetX: number;
             let targetY: number;
