@@ -1,5 +1,5 @@
 # Voxel Editor
-A lightweight, modern voxel editor built with Electron, React, TypeScript, and Vite.
+A lightweight, modern voxel editor built with Electron, BabylonJS, and React.
 
 <img width="1213" height="913" alt="image" src="https://github.com/user-attachments/assets/b2ffebfd-bff7-4755-921c-9591fbfb904d" />
 
