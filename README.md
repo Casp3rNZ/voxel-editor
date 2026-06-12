@@ -1,6 +1,8 @@
 # Voxel Editor
 A lightweight, modern voxel editor built with Electron, BabylonJS, and React.
 
+Not intended for commercial use, i built this for wuick prototyping of models for my personal projects. but if anyone find this useful, im glad. :)
+
 <img width="1213" height="913" alt="image" src="https://github.com/user-attachments/assets/b2ffebfd-bff7-4755-921c-9591fbfb904d" />
 
 
